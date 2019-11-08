@@ -5,6 +5,42 @@ from rest_framework import generics
 from rest_framework.reverse import reverse
 from .models import *
 from .serializers import *
+import json
+
+def load_json(request):
+    json_file = open('db.json', 'r')
+    dict_json = json.load(json_file)
+
+    for user in dict_json['users']:
+        address = Address.objects.create(
+            street = user['address']['street'],
+            suite = user['address']['suite'],
+            city = user['address']['city'],
+            zipcode = user['address']['zipcode'],
+        )
+        profile = Profile.objects.create(
+            id = user['id'],
+            name = user['name'],
+            email = user['email'],
+            address = address
+        )
+    for post in dict_json['posts']:
+        profile = Profile.objects.get(pk=post['userId'])
+        Post.objects.create(
+            id = post['id'],
+            title = post['title'],
+            body = post['body'],
+            profile = profile
+        )
+    for comment in dict_json['comments']:
+        post = Post.objects.get(pk=comment['postId'])
+        Comment.objects.create(
+            id = comment['id'],
+            name=comment['name'],
+            email=comment['email'],
+            body=comment['body'],
+            post=post
+        )
 
 class ApiRoot(generics.GenericAPIView):
     name = 'api-root'
@@ -15,7 +51,6 @@ class ApiRoot(generics.GenericAPIView):
             'posts' : reverse(PostList.name, request=request),
             'comments' : reverse(CommentList.name, request=request),
             'profile-posts' : reverse(ProfilePostList.name, request=request),
-            'post-comments' : reverse(PostCommentList.name, request=request),
         })
 
 class ProfileList(generics.ListCreateAPIView):
@@ -57,13 +92,3 @@ class ProfilePostDetail(generics.RetrieveAPIView):
     queryset = Profile.objects.all()
     serializer_class = ProfilePostSerializer
     name = 'profile-post-detail'
-
-class PostCommentList(generics.ListAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostCommentSerializer
-    name = 'post-comment-list'
-
-class PostCommentDetail(generics.RetrieveAPIView):
-    queryset = Post.objects.all()
-    serializer_class = PostCommentSerializer
-    name = 'post-comment-detail'

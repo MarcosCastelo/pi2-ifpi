@@ -1,6 +1,14 @@
 from rest_framework import serializers
 from .models import *
 
+
+
+
+def load_json():
+    json_file = open('db.json', 'r')
+    dict_json = json.load(json_file)
+
+
 class AddressSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Address
@@ -21,6 +29,20 @@ class ProfileSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Profile
         fields = ('name', 'email', 'address')
+    def update(self, instance, validated_data):
+        instance.name = validated_data.get('name', instance.name)
+        instance.email = validated_data.get('email', instance.email)
+        address_data = validated_data.pop('address')
+        address = instance.address
+        address.street = address_data.get('street', address.street)
+        address.suite = address_data.get('suite', address.suite)
+        address.city = address_data.get('city', address.city)
+        address.zipcode = address_data.get('zipcode', address.zipcode)
+
+        address.save()
+        instance.save()
+        return instance
+
 
 class ProfilePostSerializer(serializers.HyperlinkedModelSerializer):
     posts = serializers.SlugRelatedField(
@@ -31,9 +53,3 @@ class ProfilePostSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Profile
         fields = ('name', 'posts')
-
-class PostCommentSerializer(serializers.HyperlinkedModelSerializer):
-    comments = CommentSerializer(read_only=True, many=True)
-    class Meta:
-        model = Post
-        fields = ('title', 'comments')
